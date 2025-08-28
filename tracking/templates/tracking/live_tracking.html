@@ -1,0 +1,52 @@
+{% extends 'base.html' %}
+{% block content %}
+  <div class="mt-4">
+    <h2>Live Bus Tracking</h2>
+    <form method="get" class="row g-3 mb-4">
+      <div class="col-auto">
+        <label for="route" class="form-label">Select Route:</label>
+        <select name="route" id="route" class="form-select" onchange="this.form.submit()">
+          <option value="">--Select--</option>
+          {% for route in routes %}
+            <option value="{{ route.route_number }}" {% if selected_route == route.route_number %}selected{% endif %}>{{ route.route_number }}</option>
+          {% endfor %}
+        </select>
+      </div>
+    </form>
+    {% if locations %}
+      <div id="map" style="height: 400px; width: 100%;" class="mb-4"></div>
+      <h4>Bus Locations</h4>
+      <table class="table table-bordered table-striped">
+        <thead><tr><th>Driver</th><th>Latitude</th><th>Longitude</th><th>Timestamp</th></tr></thead>
+        <tbody>
+        {% for loc in locations %}
+          <tr>
+            <td>{{ loc.driver.full_name }}</td>
+            <td>{{ loc.latitude }}</td>
+            <td>{{ loc.longitude }}</td>
+            <td>{{ loc.timestamp }}</td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+      <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+      <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+      {{ locations|json_script:"busLocations" }}
+      <script>
+        var jsLocations = JSON.parse(document.getElementById('busLocations').textContent);
+        var mapCenter = jsLocations.length ? [jsLocations[0].lat, jsLocations[0].lng] : [0, 0];
+        var map = L.map('map').setView(mapCenter, jsLocations.length ? 14 : 2);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          maxZoom: 19,
+          attribution: '© OpenStreetMap'
+        }).addTo(map);
+        jsLocations.forEach(function(loc) {
+          L.marker([loc.lat, loc.lng]).addTo(map)
+            .bindPopup('<b>' + loc.driver + '</b><br>Lat: ' + loc.lat + '<br>Lng: ' + loc.lng + '<br>' + loc.timestamp);
+        });
+      </script>
+    {% elif selected_route %}
+      <div class="alert alert-warning">No location data for this route.</div>
+    {% endif %}
+  </div>
+{% endblock %}
