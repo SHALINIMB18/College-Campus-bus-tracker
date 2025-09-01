@@ -1,0 +1,126 @@
+{% extends 'base.html' %}
+{% block content %}
+  <div class="mt-4">
+    <h2>Live Bus Tracking</h2>
+    <form method="get" class="row g-3 mb-4">
+      <div class="col-auto">
+        <label for="route" class="form-label">Select Route:</label>
+        <select name="route" id="route" class="form-select" onchange="this.form.submit()">
+          <option value="">--Select--</option>
+          {% for route in routes %}
+            <option value="{{ route.route_number }}" {% if selected_route == route.route_number %}selected{% endif %}>{{ route.route_number }}</option>
+          {% endfor %}
+        </select>
+      </div>
+    </form>
+
+    <!-- Notification Area -->
+    <div id="notificationArea" class="alert alert-info" style="display:none;"></div>
+
+    {% if selected_route %}
+      <div id="map" style="height: 400px; width: 100%;" class="mb-4"></div>
+      <h4>Bus Locations</h4>
+      <table class="table table-bordered table-striped">
+        <thead><tr><th>Driver</th><th>Latitude</th><th>Longitude</th><th>Timestamp</th></tr></thead>
+        <tbody id="locationTableBody">
+        </tbody>
+      </table>
+      <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+      <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+      <script>
+        var routeNumber = "{{ selected_route }}";
+        var map = L.map('map').setView([0, 0], 2);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          maxZoom: 19,
+          attribution: '© OpenStreetMap'
+        }).addTo(map);
+
+        var routeLine = null;
+        var markers = {};
+
+        function fetchRouteDetails(routeNumber) {
+          fetch(`/tracking/api/route_details/${routeNumber}/`)
+            .then(response => response.json())
+            .then(data => {
+              if (routeLine) {
+                map.removeLayer(routeLine);
+              }
+              var latlngs = [];
+              // For demo, generate latlngs for stops (replace with real coordinates if available)
+              data.stops.forEach((stop, index) => {
+                // Dummy latlngs: spread stops along a line for visualization
+                latlngs.push([37.77 + index * 0.01, -122.42 + index * 0.01]);
+              });
+              routeLine = L.polyline(latlngs, {color: 'blue'}).addTo(map);
+              map.fitBounds(routeLine.getBounds());
+            });
+        }
+
+        function updateTable(locations) {
+          var tableBody = document.getElementById('locationTableBody');
+          tableBody.innerHTML = '';
+          locations.forEach(loc => {
+            var row = document.createElement('tr');
+            row.innerHTML = `<td>${loc.driver}</td><td>${loc.latitude}</td><td>${loc.longitude}</td><td>${new Date(loc.timestamp).toLocaleString()}</td>`;
+            tableBody.appendChild(row);
+          });
+        }
+
+        function addOrUpdateMarker(loc) {
+          var key = loc.driver_id;
+          if (markers[key]) {
+            markers[key].setLatLng([loc.latitude, loc.longitude]);
+          } else {
+            markers[key] = L.marker([loc.latitude, loc.longitude]).addTo(map)
+              .bindPopup('<b>' + loc.driver + '</b><br>Lat: ' + loc.latitude + '<br>Lng: ' + loc.longitude + '<br>' + loc.timestamp);
+          }
+        }
+
+        function updateMap(locations) {
+          if (locations.length > 0) {
+            map.setView([locations[0].latitude, locations[0].longitude], 14);
+          }
+          locations.forEach(addOrUpdateMarker);
+          updateTable(locations);
+        }
+
+        // WebSocket connection for real-time updates
+        var socket = new WebSocket('ws://' + window.location.host + '/ws/live-tracking/' + routeNumber + '/');
+
+        socket.onmessage = function(e) {
+          var data = JSON.parse(e.data);
+          if (data.type === 'initial_locations') {
+            updateMap(data.locations);
+          } else if (data.type === 'location_update') {
+            addOrUpdateMarker(data.location);
+            // Update table with latest location
+            fetchLiveLocations(routeNumber);
+          }
+        };
+
+        socket.onclose = function(e) {
+          console.error('WebSocket closed unexpectedly');
+          // Fallback to polling if WebSocket fails
+          setInterval(() => {
+            fetchLiveLocations(routeNumber);
+          }, 10000);
+        };
+
+        function fetchLiveLocations(routeNumber) {
+          fetch(`/tracking/api/live_locations/?route=${routeNumber}`)
+            .then(response => response.json())
+            .then(data => {
+              updateMap(data.locations);
+            });
+        }
+
+        if (routeNumber) {
+          fetchRouteDetails(routeNumber);
+          fetchLiveLocations(routeNumber);
+        }
+      </script>
+    {% else %}
+      <div class="alert alert-info">Please select a route to view live tracking.</div>
+    {% endif %}
+  </div>
+{% endblock %}

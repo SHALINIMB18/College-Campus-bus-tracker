@@ -1,0 +1,74 @@
+{% extends 'base.html' %}
+{% block content %}
+  <div class="mt-4">
+    <h2>Update Location (Driver Only)</h2>
+    <form method="post" class="row g-3" id="locationForm">
+      {% csrf_token %}
+      <div class="col-md-4">{{ form.bus_route.label_tag }}{{ form.bus_route }}</div>
+      <div class="col-md-4">{{ form.latitude.label_tag }}{{ form.latitude }}</div>
+      <div class="col-md-4">{{ form.longitude.label_tag }}{{ form.longitude }}</div>
+      <div class="col-12">
+        <button type="button" class="btn btn-secondary mb-2" onclick="getLocation()">Use My Location</button>
+        <button type="submit" class="btn btn-primary">Update Location</button>
+      </div>
+    </form>
+    <div class="alert alert-info mt-3" id="autoUpdateMsg" style="display:none;">Auto-updating your location every 10 seconds...</div>
+    <button class="btn btn-outline-success mt-2" id="startAutoUpdateBtn" onclick="startAutoUpdate()">Start Auto Location Update</button>
+    <button class="btn btn-outline-danger mt-2" id="stopAutoUpdateBtn" onclick="stopAutoUpdate()" style="display:none;">Stop Auto Location Update</button>
+    <div id="updateStatus" class="mt-2"></div>
+  </div>
+  <script>
+    function getLocation() {
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(function(position) {
+          document.getElementById('id_latitude').value = position.coords.latitude;
+          document.getElementById('id_longitude').value = position.coords.longitude;
+        }, function(error) {
+          alert('Unable to retrieve your location.');
+        });
+      } else {
+        alert('Geolocation is not supported by this browser.');
+      }
+    }
+
+    let autoUpdateInterval = null;
+    function startAutoUpdate() {
+      document.getElementById('autoUpdateMsg').style.display = '';
+      document.getElementById('startAutoUpdateBtn').style.display = 'none';
+      document.getElementById('stopAutoUpdateBtn').style.display = '';
+      autoUpdateInterval = setInterval(function() {
+        if (navigator.geolocation) {
+          navigator.geolocation.getCurrentPosition(function(position) {
+            document.getElementById('id_latitude').value = position.coords.latitude;
+            document.getElementById('id_longitude').value = position.coords.longitude;
+            // Submit the form via AJAX
+            var form = document.getElementById('locationForm');
+            var formData = new FormData(form);
+            fetch(window.location.href, {
+              method: 'POST',
+              headers: { 'X-CSRFToken': formData.get('csrfmiddlewaretoken') },
+              body: formData
+            })
+            .then(response => {
+              if (response.ok) {
+                document.getElementById('updateStatus').innerHTML = '<span class="text-success">Location updated!</span>';
+              } else {
+                document.getElementById('updateStatus').innerHTML = '<span class="text-danger">Update failed.</span>';
+              }
+            })
+            .catch(() => {
+              document.getElementById('updateStatus').innerHTML = '<span class="text-danger">Network error.</span>';
+            });
+          });
+        }
+      }, 10000); // 10 seconds
+    }
+    function stopAutoUpdate() {
+      clearInterval(autoUpdateInterval);
+      document.getElementById('autoUpdateMsg').style.display = 'none';
+      document.getElementById('startAutoUpdateBtn').style.display = '';
+      document.getElementById('stopAutoUpdateBtn').style.display = 'none';
+      document.getElementById('updateStatus').innerHTML = '';
+    }
+  </script>
+{% endblock %}

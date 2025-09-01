@@ -1,0 +1,17 @@
+{% extends 'base.html' %}
+{% block content %}
+  <div class="mt-4">
+    <h2>User Profile</h2>
+    <div class="card w-50 mx-auto mt-4">
+      <div class="card-body">
+        <ul class="list-group list-group-flush">
+          <li class="list-group-item"><strong>Username:</strong> {{ user.username }}</li>
+          <li class="list-group-item"><strong>Full Name:</strong> {{ user.full_name }}</li>
+          <li class="list-group-item"><strong>Email:</strong> {{ user.email }}</li>
+          <li class="list-group-item"><strong>Phone:</strong> {{ user.phone }}</li>
+          <li class="list-group-item"><strong>Role:</strong> {{ user.role }}</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+{% endblock %}

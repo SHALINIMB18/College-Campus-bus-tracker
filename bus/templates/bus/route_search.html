@@ -1,0 +1,30 @@
+{% extends 'base.html' %}
+{% block content %}
+  <div class="mt-4">
+    <h2>Search Bus Routes</h2>
+    <form method="get" class="row g-3 mb-4">
+      <div class="col-auto">
+        {{ form.query.label_tag }}
+        {{ form.query }}
+      </div>
+      <div class="col-auto">
+        <button type="submit" class="btn btn-primary">Search</button>
+      </div>
+    </form>
+    <h4>Results</h4>
+    <table class="table table-bordered table-striped">
+      <thead><tr><th>Route Number</th><th>Stops</th><th>Timings</th></tr></thead>
+      <tbody>
+      {% for route in routes %}
+        <tr>
+          <td>{{ route.route_number }}</td>
+          <td>{{ route.stops }}</td>
+          <td>{{ route.timings }}</td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="3">No routes found.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% endblock %}

@@ -1,0 +1,173 @@
+{% extends 'base.html' %}
+{% block content %}
+  <div class="mt-4">
+    <h2>Driver Live Map - Route {{ bus_route.route_number }}</h2>
+    
+    {% if error %}
+      <div class="alert alert-danger">{{ error }}</div>
+    {% else %}
+      <div class="row">
+        <div class="col-md-8">
+          <!-- Map Container -->
+          <div id="map" style="height: 500px; width: 100%;" class="mb-4 border rounded"></div>
+
+          <!-- Notification Area -->
+          <div id="notificationArea" class="alert alert-info" style="display:none;"></div>
+          
+          <!-- Location Sharing Controls -->
+          <div class="card mb-4">
+            <div class="card-header">
+              <h5 class="mb-0">Location Sharing</h5>
+            </div>
+            <div class="card-body">
+              <div class="d-flex gap-2 align-items-center">
+                <button class="btn btn-success" id="startSharingBtn" onclick="startLocationSharing()" {% if is_sharing %}disabled{% endif %}>
+                  <i class="fas fa-play"></i> Start Sharing
+                </button>
+                <button class="btn btn-danger" id="stopSharingBtn" onclick="stopLocationSharing()" {% if not is_sharing %}disabled{% endif %}>
+                  <i class="fas fa-stop"></i> Stop Sharing
+                </button>
+                <span id="sharingStatus" class="ms-2">
+                  {% if is_sharing %}
+                    <span class="text-success"><i class="fas fa-circle"></i> Sharing Active</span>
+                  {% else %}
+                    <span class="text-secondary"><i class="fas fa-circle"></i> Not Sharing
+                  {% endif %}
+                </span>
+              </div>
+              <div class="form-text">When sharing is active, your location will be updated every 10 seconds.</div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="col-md-4">
+          <!-- Route Information -->
+          <div class="card mb-3">
+            <div class="card-header">
+              <h5 class="mb-0">Route Information</h5>
+            </div>
+            <div class="card-body">
+              <p><strong>Route:</strong> {{ bus_route.route_number }}</p>
+              <p><strong>Timings:</strong> {{ bus_route.timings }}</p>
+            </div>
+          </div>
+          
+          <!-- Stops List -->
+          <div class="card">
+            <div class="card-header">
+              <h5 class="mb-0">Bus Stops</h5>
+            </div>
+            <div class="card-body">
+              <ol class="list-group list-group-numbered">
+                {% for stop in stops %}
+                  <li class="list-group-item">{{ stop }}</li>
+                {% endfor %}
+              </ol>
+            </div>
+          </div>
+        </div>
+      </div>
+    {% endif %}
+  </div>
+
+  <!-- Map Libraries -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  
+  <!-- Pass data safely from Django to JavaScript -->
+  <script id="map-data" type="application/json">
+    {
+      "isSharing": {{ is_sharing|yesno:"true,false" }},
+      "busRouteId": "{{ bus_route.id }}",
+      "updateUrl": "{% url 'update_location' %}",
+      "csrfToken": "{{ csrf_token }}"
+    }
+  </script>
+
+  <script>
+    // Parse data from Django
+    const mapData = JSON.parse(document.getElementById('map-data').textContent);
+    
+    // Global variables
+    let map;
+    let driverMarker = null;
+    let autoUpdateInterval = null;
+    let isSharing = mapData.isSharing;
+
+    // Initialize map
+    function initMap() {
+      map = L.map('map').setView([0, 0], 13);
+      
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+        attribution: '© OpenStreetMap'
+      }).addTo(map);
+    }
+
+    // Start location sharing
+    function startLocationSharing() {
+      if (isSharing) return;
+      
+      document.getElementById('startSharingBtn').disabled = true;
+      document.getElementById('stopSharingBtn').disabled = false;
+      document.getElementById('sharingStatus').innerHTML = '<span class="text-success"><i class="fas fa-circle"></i> Sharing Active</span>';
+      isSharing = true;
+      
+      // Start auto-update
+      autoUpdateInterval = setInterval(updateDriverLocation, 10000);
+      updateDriverLocation(); // Update immediately
+    }
+
+    // Stop location sharing
+    function stopLocationSharing() {
+      if (!isSharing) return;
+      
+      clearInterval(autoUpdateInterval);
+      document.getElementById('startSharingBtn').disabled = false;
+      document.getElementById('stopSharingBtn').disabled = true;
+      document.getElementById('sharingStatus').innerHTML = '<span class="text-secondary"><i class="fas fa-circle"></i> Not Sharing</span>';
+      isSharing = false;
+    }
+
+    // Update driver location
+    function updateDriverLocation() {
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(function(position) {
+          const formData = new FormData();
+          formData.append('bus_route', mapData.busRouteId);
+          formData.append('latitude', position.coords.latitude);
+          formData.append('longitude', position.coords.longitude);
+          formData.append('csrfmiddlewaretoken', mapData.csrfToken);
+          
+          fetch(mapData.updateUrl, {
+            method: 'POST',
+            body: formData
+          })
+          .then(response => response.json())
+          .then(data => {
+            if (data.status === 'ok') {
+              // Update map marker
+              if (driverMarker) {
+                map.removeLayer(driverMarker);
+              }
+              driverMarker = L.marker([position.coords.latitude, position.coords.longitude])
+                .addTo(map)
+                .bindPopup('Your Current Location')
+                .openPopup();
+              map.setView([position.coords.latitude, position.coords.longitude], 14);
+            }
+          })
+          .catch(error => {
+            console.error('Error updating location:', error);
+          });
+        });
+      }
+    }
+
+    // Initialize map when page loads
+    document.addEventListener('DOMContentLoaded', initMap);
+  </script>
+  
+  <!-- Font Awesome for icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+{% endblock %}
