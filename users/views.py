@@ -26,6 +26,10 @@ def login_view(request):
             user = authenticate(request, username=username_or_phone, password=password)
             if user is not None:
                 login(request, user)
+                # Redirect to next parameter if present
+                next_url = request.GET.get('next')
+                if next_url:
+                    return redirect(next_url)
                 return redirect('dashboard')
             else:
                 messages.error(request, 'Invalid username or password.')

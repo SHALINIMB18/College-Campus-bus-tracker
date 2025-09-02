@@ -1,5 +1,3 @@
-
-
 # Custom user model
 AUTH_USER_MODEL = 'users.User'
 
@@ -34,6 +32,11 @@ ALLOWED_HOSTS = []
 
 
 # Application definition
+
+AUTHENTICATION_BACKENDS = [
+    'users.auth_backend.PhoneOrUsernameModelBackend',
+    'django.contrib.auth.backends.ModelBackend',
+]
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -126,6 +129,11 @@ USE_TZ = True
 STATIC_URL = '/static/'
 STATICFILES_DIRS = [BASE_DIR / 'static']
 STATIC_ROOT = BASE_DIR / 'staticfiles'
+
+# Add this to serve static files during development
+if DEBUG:
+    import mimetypes
+    mimetypes.add_type("application/javascript", ".js", True)
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
