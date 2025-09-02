@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
 {% block content %}
   <div class="mt-4">
-    <h2>Live Bus Tracking</h2>
+    <h2>Live Bus Tracking (FastAPI Integration)</h2>
     <form method="get" class="row g-3 mb-4">
       <div class="col-auto">
         <label for="route" class="form-label">Select Route:</label>
@@ -46,7 +46,6 @@
                 map.removeLayer(routeLine);
               }
               var latlngs = [];
-              // Use actual latitude and longitude from stops for accurate plotting
               data.stops.forEach((stop) => {
                 latlngs.push([stop.latitude, stop.longitude]);
               });
@@ -83,7 +82,7 @@
           updateTable(locations);
         }
 
-        // WebSocket connection for real-time updates
+        // WebSocket connection for real-time updates (Django Channels)
         var socket = new WebSocket('ws://' + window.location.host + '/ws/live-tracking/' + routeNumber + '/');
 
         socket.onmessage = function(e) {
@@ -92,24 +91,28 @@
             updateMap(data.locations);
           } else if (data.type === 'location_update') {
             addOrUpdateMarker(data.location);
-            // Update table with latest location
             fetchLiveLocations(routeNumber);
           }
         };
 
         socket.onclose = function(e) {
           console.error('WebSocket closed unexpectedly');
-          // Fallback to polling if WebSocket fails
+          // Fallback to polling FastAPI endpoint if WebSocket fails
           setInterval(() => {
             fetchLiveLocations(routeNumber);
           }, 10000);
         };
 
+        // Fetch live locations from FastAPI endpoint
         function fetchLiveLocations(routeNumber) {
-          fetch(`/tracking/api/live_locations/?route=${routeNumber}`)
+          fetch(`http://127.0.0.1:8001/api/location/update`)  // Example FastAPI endpoint
             .then(response => response.json())
             .then(data => {
-              updateMap(data.locations);
+              if (data.status === 'success') {
+                updateMap(Array.isArray(data.data) ? data.data : [data.data]);
+              } else {
+                console.error('Failed to fetch locations from FastAPI');
+              }
             });
         }
 

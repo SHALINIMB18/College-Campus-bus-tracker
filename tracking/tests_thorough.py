@@ -1,3 +1,8 @@
+import os
+import django
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'campusbus.settings')
+django.setup()
+
 from django.test import TestCase, Client
 from django.urls import reverse
 from django.contrib.auth import get_user_model
@@ -11,7 +16,9 @@ User = get_user_model()
 class TrackingThoroughTests(TestCase):
     def setUp(self):
         self.client = Client()
-        self.user = User.objects.create_user(username='testuser', password='testpass', role='driver')
+        User.objects.filter(username='testuser').delete()
+        User.objects.filter(phone='').delete()
+        self.user = User.objects.create_user(username='testuser', password='testpass', role='driver', phone='')
         self.bus_route = BusRoute.objects.create(route_number='R1', stops='Stop1, Stop2', timings='9AM-5PM')
         self.assignment = Assignment.objects.create(driver=self.user, bus_route=self.bus_route)
 
