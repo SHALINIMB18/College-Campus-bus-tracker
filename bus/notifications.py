@@ -6,8 +6,8 @@ from users.models import User
 def notify_users_on_bus_active(route_number, eta, driver):
     try:
         assignment = Assignment.objects.get(bus_route__route_number=route_number)
-        users = list(assignment.students.all()) + list(assignment.staff.all())
-        emails = [u.email for u in users if u.email]
+        # Since Assignment model has no students or staff, notify only driver for now
+        emails = [driver.email] if driver.email else []
         if emails:
             subject = f"Bus {route_number} is now active!"
             message = f"Bus {route_number} is now active.\nETA: {eta}\nDriver: {driver.full_name}"

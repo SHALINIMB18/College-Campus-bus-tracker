@@ -46,10 +46,9 @@
                 map.removeLayer(routeLine);
               }
               var latlngs = [];
-              // For demo, generate latlngs for stops (replace with real coordinates if available)
-              data.stops.forEach((stop, index) => {
-                // Dummy latlngs: spread stops along a line for visualization
-                latlngs.push([37.77 + index * 0.01, -122.42 + index * 0.01]);
+              // Use actual latitude and longitude from stops for accurate plotting
+              data.stops.forEach((stop) => {
+                latlngs.push([stop.latitude, stop.longitude]);
               });
               routeLine = L.polyline(latlngs, {color: 'blue'}).addTo(map);
               map.fitBounds(routeLine.getBounds());

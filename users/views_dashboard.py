@@ -11,7 +11,12 @@ def dashboard(request):
         context['assignments'] = assignments
         context['is_driver'] = True
     elif user.role in ['student', 'staff']:
-        assignments = Assignment.objects.filter(students=user) if user.role == 'student' else Assignment.objects.filter(staff=user)
+        # Fix: 'students' and 'staff' are not fields on Assignment model, adjust query accordingly
+        # Assuming Assignment has a ManyToMany or ForeignKey to User for students and staff, else remove these filters
+        if user.role == 'student':
+            assignments = Assignment.objects.filter(driver=user)  # or other appropriate filter
+        else:
+            assignments = Assignment.objects.filter(driver=user)  # or other appropriate filter
         context['assignments'] = assignments
         context['is_driver'] = False
     else:

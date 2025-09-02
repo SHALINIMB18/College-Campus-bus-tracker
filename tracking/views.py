@@ -105,7 +105,15 @@ def get_live_locations(request):
 def get_route_details(request, route_number):
     """API endpoint to get route details including stops"""
     bus_route = get_object_or_404(BusRoute, route_number=route_number)
-    stops = [stop.strip() for stop in bus_route.stops.split(',')] if bus_route.stops else []
+    # Use BusStop model to get stops with lat/lng
+    stops_qs = bus_route.bus_stops.all()
+    stops = []
+    for stop in stops_qs:
+        stops.append({
+            'name': stop.name,
+            'latitude': stop.latitude,
+            'longitude': stop.longitude
+        })
     
     return JsonResponse({
         'route_number': bus_route.route_number,

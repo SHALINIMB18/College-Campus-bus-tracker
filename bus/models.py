@@ -1,21 +1,25 @@
-
-
 from django.db import models
-from users.models import User
 
 class BusRoute(models.Model):
-	route_number = models.CharField(max_length=20, unique=True)
-	stops = models.TextField(help_text='Comma-separated list of stops')
-	timings = models.CharField(max_length=100)
+    route_number = models.CharField(max_length=10, unique=True)
+    timings = models.CharField(max_length=100, blank=True)
+    stops = models.TextField(blank=True)  # Comma-separated stop names
 
-	def __str__(self):
-		return f"Route {self.route_number}"
+    def __str__(self):
+        return self.route_number
 
 class Assignment(models.Model):
-	bus_route = models.ForeignKey(BusRoute, on_delete=models.CASCADE)
-	driver = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='assigned_routes')
-	students = models.ManyToManyField(User, related_name='student_routes', blank=True)
-	staff = models.ManyToManyField(User, related_name='staff_routes', blank=True)
+    bus_route = models.ForeignKey(BusRoute, on_delete=models.CASCADE)
+    driver = models.ForeignKey('users.User', on_delete=models.CASCADE)
 
-	def __str__(self):
-		return f"Assignment for {self.bus_route}"
+    def __str__(self):
+        return f"{self.driver} assigned to {self.bus_route}"
+
+class BusStop(models.Model):
+    name = models.CharField(max_length=100)
+    latitude = models.FloatField()
+    longitude = models.FloatField()
+    route = models.ForeignKey(BusRoute, related_name='bus_stops', on_delete=models.CASCADE)
+
+    def __str__(self):
+        return f"{self.name} ({self.route.route_number})"
