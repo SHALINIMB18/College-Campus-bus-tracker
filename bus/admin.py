@@ -9,3 +9,4 @@ class BusRouteAdmin(admin.ModelAdmin):
 @admin.register(BusStop)
 class BusStopAdmin(admin.ModelAdmin):
     list_display = ('name', 'route', 'latitude', 'longitude')
+    readonly_fields = ('latitude', 'longitude')

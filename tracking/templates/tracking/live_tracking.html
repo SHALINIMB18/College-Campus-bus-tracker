@@ -100,7 +100,7 @@
           // Fallback to polling FastAPI endpoint if WebSocket fails
           setInterval(() => {
             fetchLiveLocations(routeNumber);
-          }, 10000);
+          }, 1000);
         };
 
         // Fetch live locations from FastAPI endpoint

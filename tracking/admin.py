@@ -5,3 +5,4 @@ from .models import Location
 @admin.register(Location)
 class LocationAdmin(admin.ModelAdmin):
 	list_display = ('bus_route', 'driver', 'latitude', 'longitude', 'timestamp')
+	readonly_fields = ('latitude', 'longitude')
