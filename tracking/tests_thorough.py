@@ -16,11 +16,22 @@ User = get_user_model()
 class TrackingThoroughTests(TestCase):
     def setUp(self):
         self.client = Client()
-        User.objects.filter(username='testuser').delete()
-        User.objects.filter(phone='').delete()
-        self.user = User.objects.create_user(username='testuser', password='testpass', role='driver', phone='')
+        # Clean up any existing test data to avoid foreign key issues
+        User.objects.filter(username__startswith='testuser').delete()
+        User.objects.filter(username__startswith='student').delete()
+        User.objects.filter(phone__startswith='999').delete()  # Clean up test phone numbers
+
+        # Create test users with unique phone numbers
+        self.user = User.objects.create_user(username='testuser', password='testpass', role='driver', phone='9991111111', full_name='Test Driver')
+        self.student1 = User.objects.create_user(username='student1', password='testpass', role='student', phone='9992222222', full_name='Student One')
+        self.student2 = User.objects.create_user(username='student2', password='testpass', role='student', phone='9993333333', full_name='Student Two')
+
+        # Create bus route
         self.bus_route = BusRoute.objects.create(route_number='R1', stops='Stop1, Stop2', timings='9AM-5PM')
+
+        # Create assignment and assign students
         self.assignment = Assignment.objects.create(driver=self.user, bus_route=self.bus_route)
+        self.assignment.students.add(self.student1, self.student2)
 
     def test_driver_live_map_requires_login(self):
         response = self.client.get(reverse('driver_live_map'))
@@ -28,9 +39,13 @@ class TrackingThoroughTests(TestCase):
 
     def test_driver_live_map_access(self):
         self.client.login(username='testuser', password='testpass')
-        response = self.client.get(reverse('driver_live_map'))
+        response = self.client.get(reverse('driver_live_map'), follow=True)
         self.assertEqual(response.status_code, 200)
-        self.assertTemplateUsed(response, 'tracking/driver_live_map_clean.html')
+        # Check for specific content from the driver_live_map_clean.html template
+        self.assertContains(response, 'Driver Live Map')
+        self.assertContains(response, 'Route R1')
+        self.assertContains(response, 'Location Sharing')
+        self.assertContains(response, 'Start Sharing')
 
     def test_get_live_locations_api(self):
         self.client.login(username='testuser', password='testpass')

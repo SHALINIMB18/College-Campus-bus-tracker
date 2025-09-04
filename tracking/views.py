@@ -44,30 +44,30 @@ def driver_live_map(request):
     """Driver-specific live map showing assigned route and location sharing controls"""
     if request.user.role != 'driver':
         return redirect('dashboard')
-    
+
     # Get driver's assigned routes
     assignments = Assignment.objects.filter(driver=request.user)
     if not assignments.exists():
         return render(request, 'tracking/driver_live_map.html', {
             'error': 'No routes assigned to you. Please contact administrator.'
         })
-    
+
     # Get the first assigned route (could be enhanced to handle multiple routes)
     assignment = assignments.first()
     bus_route = assignment.bus_route
-    
+
     # Parse stops from the route
     stops = [stop.strip() for stop in bus_route.stops.split(',')] if bus_route.stops else []
-    
+
     # Get recent locations for this route
     recent_locations = Location.objects.filter(
         bus_route=bus_route,
         timestamp__gte=timezone.now() - timedelta(minutes=5)
     ).order_by('-timestamp')
-    
+
     # Check if driver is currently sharing location
     is_sharing = recent_locations.filter(driver=request.user).exists()
-    
+
     return render(request, 'tracking/driver_live_map_clean.html', {
         'bus_route': bus_route,
         'stops': stops,
